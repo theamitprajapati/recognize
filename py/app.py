@@ -3,9 +3,9 @@ from flask import Flask, render_template, request
 
 # import our OCR function
 from ocr_server import ocr_core
-
+from werkzeug.utils import secure_filename
 # define a folder to store and later serve the images
-UPLOAD_FOLDER = '/static/uploads/'
+UPLOAD_FOLDER = 'static/uploads/'
 
 # allow files of a specific type
 ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg'])
@@ -13,6 +13,8 @@ ALLOWED_EXTENSIONS = set(['png', 'jpg', 'jpeg'])
 app = Flask(__name__)
 
 # function to check the file extension
+
+
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -26,8 +28,7 @@ def home_page():
 @app.route('/upload', methods=['GET', 'POST'])
 def upload_page():
     if request.method == 'POST':
-    
-    
+
         # check if there is a file in the request
         if 'file' not in request.files:
             return render_template('upload.html', msg='No file selected')
@@ -35,21 +36,22 @@ def upload_page():
         # if no file is selected
         if file.filename == '':
             return render_template('upload.html', msg='No file selected')
-        
-        file.save(file.filename )
+
+        file.save(os.path.join(app.config['UPLOAD_FOLDER'], secure_filename(file.filename)))
         # call the OCR function on it
-        extracted_text = ocr_core(file.filename)
+        extracted_text = ocr_core(UPLOAD_FOLDER+file.filename)
 
         # extract the text and display it
         return render_template('upload.html',
-                                msg='Successfully processed',
-                                extracted_text=extracted_text,
-                                img_src=UPLOAD_FOLDER + file.filename)
+                               msg='Successfully processed',
+                               extracted_text=extracted_text,
+                               img_src=UPLOAD_FOLDER + file.filename)
     elif request.method == 'GET':
         return render_template('upload.html')
+
 
 if __name__ == '__main__':
     app.env = 'development'
     app.debug = True
-    #app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+    app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
     app.run()
